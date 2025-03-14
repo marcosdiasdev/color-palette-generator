@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Color Palette Generator</title>
+    <!-- Add TailwindCSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Tooltip styling */
+      .tooltip {
+        position: absolute;
+        background-color: rgba(0, 0, 0, 0.75);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        transform: translate(-50%, -150%);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      .tooltip.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 text-gray-800 font-sans">
+    <div class="max-w-4xl mx-auto py-10 px-5">
+      <h1 class="text-3xl font-bold text-center mb-6">
+        Color Palette Generator
+      </h1>
+
+      <!-- Controls Section -->
+      <div class="bg-white shadow-md rounded-lg p-6 mb-8">
+        <div class="mb-4">
+          <label for="baseColor" class="block text-gray-700 font-medium"
+            >Base Color:</label
+          >
+          <input
+            type="text"
+            id="baseColor"
+            placeholder="#57736A"
+            value="#57736A"
+            onkeyup="generatePalette()"
+            class="w-full border border-gray-300 rounded p-2 mt-1"
+          />
+        </div>
+        <div class="mb-4">
+          <label for="variantRange" class="block text-gray-700 font-medium">
+            Number of Variants: <span id="variantCount">5</span>
+          </label>
+          <input
+            type="range"
+            id="variantRange"
+            min="1"
+            max="15"
+            value="5"
+            onchange="generatePalette()"
+            class="w-full mt-2"
+          />
+        </div>
+        <div class="mb-4">
+          <label for="lightnessRange" class="block text-gray-700 font-medium">
+            Max Lightness (Lighter Shades): <span id="lightnessValue">1.5</span>
+          </label>
+          <input
+            type="range"
+            id="lightnessRange"
+            min="1.1"
+            max="3"
+            step="0.1"
+            value="1.5"
+            onchange="generatePalette()"
+            class="w-full mt-2"
+          />
+        </div>
+        <div class="mb-4">
+          <label for="darknessRange" class="block text-gray-700 font-medium">
+            Max Darkness (Darker Shades): <span id="darknessValue">0.5</span>
+          </label>
+          <input
+            type="range"
+            id="darknessRange"
+            min="0.1"
+            max="0.9"
+            step="0.1"
+            value="0.5"
+            onchange="generatePalette()"
+            class="w-full mt-2"
+          />
+        </div>
+      </div>
+
+      <!-- Palette Section -->
+      <div
+        id="palette"
+        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 relative"
+      ></div>
+    </div>
+
+    <script>
+      function generateColorVariants(
+        baseHex,
+        steps,
+        maxLightness,
+        maxDarkness
+      ) {
+        const baseRgb = hexToRgb(baseHex);
+        const variants = [];
+        const halfSteps = Math.floor((steps - 1) / 2);
+
+        // Generate lighter shades
+        for (let i = 1; i <= halfSteps; i++) {
+          const lighterFactor = 1 + i * ((maxLightness - 1) / halfSteps);
+          const lighterShade = generateShade(baseRgb, lighterFactor);
+          variants.unshift(
+            rgbToHex(lighterShade.r, lighterShade.g, lighterShade.b)
+          );
+        }
+
+        variants.push(baseHex); // Add the base color
+
+        // Generate darker shades
+        for (let i = 1; i <= steps - 1 - halfSteps; i++) {
+          const darkerFactor =
+            1 - i * ((1 - maxDarkness) / (steps - 1 - halfSteps));
+          const darkerShade = generateShade(baseRgb, darkerFactor);
+          variants.push(rgbToHex(darkerShade.r, darkerShade.g, darkerShade.b));
+        }
+
+        return variants;
+      }
+
+      function copyToClipboard(color, element) {
+        navigator.clipboard.writeText(color).then(
+          () => {
+            showTooltip(element, "Copied!");
+          },
+          () => {
+            showTooltip(element, "Failed to copy!");
+          }
+        );
+      }
+
+      function showTooltip(element, message) {
+        // Remove any existing tooltips
+        const existingTooltip = document.querySelector(".tooltip");
+        if (existingTooltip) {
+          existingTooltip.remove();
+        }
+
+        // Create a tooltip element
+        const tooltip = document.createElement("div");
+        tooltip.className = "tooltip visible";
+        tooltip.innerText = message;
+
+        // Position the tooltip
+        element.appendChild(tooltip);
+        setTimeout(() => tooltip.remove(), 1500);
+      }
+
+      function generatePalette() {
+        const baseColor = document.getElementById("baseColor").value;
+        const variantSteps = parseInt(
+          document.getElementById("variantRange").value,
+          10
+        );
+        const maxLightness = parseFloat(
+          document.getElementById("lightnessRange").value
+        );
+        const maxDarkness = parseFloat(
+          document.getElementById("darknessRange").value
+        );
+        const paletteDiv = document.getElementById("palette");
+        paletteDiv.innerHTML = "";
+
+        const colors = generateColorVariants(
+          baseColor,
+          variantSteps,
+          maxLightness,
+          maxDarkness
+        );
+
+        colors.forEach((color) => {
+          const colorBox = document.createElement("div");
+          colorBox.className =
+            "flex items-center justify-center text-white text-sm font-medium rounded shadow-md h-32 w-32 cursor-pointer relative";
+          colorBox.style.backgroundColor = color;
+          colorBox.innerHTML = `<span class="px-2 py-1 bg-black bg-opacity-50 rounded">${color}</span>`;
+          colorBox.addEventListener("click", () =>
+            copyToClipboard(color, colorBox)
+          );
+          paletteDiv.appendChild(colorBox);
+        });
+      }
+
+      function hexToRgb(hex) {
+        const bigint = parseInt(hex.slice(1), 16);
+        return {
+          r: (bigint >> 16) & 255,
+          g: (bigint >> 8) & 255,
+          b: bigint & 255,
+        };
+      }
+
+      function rgbToHex(r, g, b) {
+        return `#${((1 << 24) + (r << 16) + (g << 8) + b)
+          .toString(16)
+          .slice(1)
+          .toUpperCase()}`;
+      }
+
+      function generateShade(rgb, factor) {
+        return {
+          r: Math.min(255, Math.max(0, Math.round(rgb.r * factor))),
+          g: Math.min(255, Math.max(0, Math.round(rgb.g * factor))),
+          b: Math.min(255, Math.max(0, Math.round(rgb.b * factor))),
+        };
+      }
+
+      // Update sliders dynamically
+      document
+        .getElementById("variantRange")
+        .addEventListener("input", function () {
+          document.getElementById("variantCount").innerText = this.value;
+        });
+
+      document
+        .getElementById("lightnessRange")
+        .addEventListener("input", function () {
+          document.getElementById("lightnessValue").innerText = this.value;
+        });
+
+      document
+        .getElementById("darknessRange")
+        .addEventListener("input", function () {
+          document.getElementById("darknessValue").innerText = this.value;
+        });
+
+      document.addEventListener("DOMContentLoaded", generatePalette);
+    </script>
+  </body>
+</html>
