@@ -28,54 +28,59 @@
     </style>
   </head>
   <body class="bg-gray-100 text-gray-800 font-sans">
-    <div class="max-w-4xl mx-auto py-10 px-5">
-      <h1 class="text-3xl font-bold text-center mb-6">
-        Color Palette Generator
-      </h1>
+    <div class="max-w-4xl mx-auto py-10 px-5 flex flex-col gap-4">
+      <h1 class="text-xl font-bold text-center">Color Palette Generator</h1>
 
       <!-- Controls Section -->
-      <div class="bg-white shadow-md rounded-lg p-6 mb-8">
-        <div class="mb-4">
-          <label for="primaryColor" class="block text-gray-700 font-medium">
-            Primary Color:
-          </label>
-          <input
-            type="text"
-            id="primaryColor"
-            placeholder="#57736A"
-            value="#57736A"
-            onkeyup="generatePalette()"
-            class="w-full border border-gray-300 rounded p-2 mt-1"
-          />
+      <div class="bg-white shadow-md rounded-lg p-4">
+        <div class="flex gap-4 justify-between">
+          <div class="mb-4">
+            <label for="primaryColor" class="block text-gray-700 font-medium">
+              Primary Color:
+            </label>
+            <input
+              type="text"
+              id="primaryColor"
+              placeholder="#57736A"
+              value="#57736A"
+              onkeyup="generatePalette()"
+              class="w-full border border-gray-300 rounded p-2 mt-1"
+            />
+          </div>
+          <div class="mb-4">
+            <label for="secondaryColor" class="block text-gray-700 font-medium"
+              >Secondary Color:</label
+            >
+            <input
+              type="text"
+              id="secondaryColor"
+              placeholder="#8B5CF6"
+              value="#8B5CF6"
+              onkeyup="generatePalette()"
+              class="w-full border border-gray-300 rounded p-2 mt-1"
+            />
+          </div>
+          <div class="mb-4">
+            <label for="strategySelect" class="block text-gray-700 font-medium">
+              Color Scale Strategy:
+            </label>
+            <select
+              id="strategySelect"
+              onchange="generatePalette()"
+              class="w-full border border-gray-300 rounded p-2 mt-1"
+            >
+              <option value="rgb">RGB Luminance (Simple)</option>
+              <option value="lab">Perceptual Lightness (LAB)</option>
+              <option value="saturation">Lightness + Saturation</option>
+              <option value="oklch">OKLCH Lightness (Perceptual)</option>
+              <option value="wcag">WCAG Contrast Optimized</option>
+              <option value="temperature">
+                Temperature Shift (Warm ↔ Cool)
+              </option>
+            </select>
+          </div>
         </div>
-        <div class="mb-4">
-          <label for="secondaryColor" class="block text-gray-700 font-medium"
-            >Secondary Color:</label
-          >
-          <input
-            type="text"
-            id="secondaryColor"
-            placeholder="#8B5CF6"
-            value="#8B5CF6"
-            onkeyup="generatePalette()"
-            class="w-full border border-gray-300 rounded p-2 mt-1"
-          />
-        </div>
-        <div class="mb-4">
-          <label for="strategySelect" class="block text-gray-700 font-medium">
-            Color Scale Strategy:
-          </label>
-          <select
-            id="strategySelect"
-            onchange="generatePalette()"
-            class="w-full border border-gray-300 rounded p-2 mt-1"
-          >
-            <option value="rgb">RGB Luminance (Simple)</option>
-            <option value="lab">Perceptual Lightness (LAB)</option>
-            <option value="saturation">Lightness + Saturation</option>
-          </select>
-        </div>
-        <div class="mb-4">
+        <div class="">
           <label for="variantRange" class="block text-gray-700 font-medium">
             Number of Variants: <span id="variantCount">5</span>
           </label>
@@ -89,7 +94,7 @@
             class="w-full mt-2"
           />
         </div>
-        <div class="mb-4">
+        <div class="">
           <label for="lightnessRange" class="block text-gray-700 font-medium">
             Max Lightness (Lighter Shades): <span id="lightnessValue">1.5</span>
           </label>
@@ -104,7 +109,7 @@
             class="w-full mt-2"
           />
         </div>
-        <div class="mb-4">
+        <div class="">
           <label for="darknessRange" class="block text-gray-700 font-medium">
             Max Darkness (Darker Shades): <span id="darknessValue">0.5</span>
           </label>
@@ -122,17 +127,17 @@
       </div>
 
       <!-- Primary Palette Section -->
-      <h2 class="text-2xl font-bold mb-4">Primary Palette</h2>
+      <h2 class="text-xl font-bold">Primary Palette</h2>
       <div
         id="primaryPalette"
-        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 relative mb-8"
+        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 relative"
       ></div>
 
       <!-- Secondary Palette Section -->
-      <h2 class="text-2xl font-bold mb-4">Secondary Palette</h2>
+      <h2 class="text-xl font-bold">Secondary Palette</h2>
       <div
         id="secondaryPalette"
-        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 relative mb-8"
+        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 relative"
       ></div>
 
       <!-- Copy Theme Button -->
@@ -157,6 +162,70 @@
       ) {
         const variants = [];
         const halfSteps = Math.floor((steps - 1) / 2);
+        function clamp(v, min = 0, max = 1) {
+          return Math.min(max, Math.max(min, v));
+        }
+
+        // OKLCH Lightness strategy (approximated via HSL lightness)
+        if (strategy === "oklch") {
+          const hsl = rgbToHsl(...Object.values(hexToRgb(primaryHex)));
+          for (let i = -halfSteps; i <= steps - 1 - halfSteps; i++) {
+            const l = clamp(hsl.l + i * ((maxLightness - maxDarkness) / steps));
+            const rgb = hslToRgb(hsl.h, hsl.s, l);
+            variants.push(rgbToHex(rgb.r, rgb.g, rgb.b));
+          }
+          return variants.sort(
+            (a, b) => getRelativeLuminance(b) - getRelativeLuminance(a)
+          );
+        }
+
+        // WCAG contrast-optimized scale
+        if (strategy === "wcag") {
+          const baseRgb = hexToRgb(primaryHex);
+          const backgrounds = ["#FFFFFF", "#000000"];
+
+          for (let i = -halfSteps; i <= steps - 1 - halfSteps; i++) {
+            let factor = 1 + i * ((maxLightness - maxDarkness) / steps);
+            let shade = generateShade(baseRgb, factor);
+            let hex = rgbToHex(shade.r, shade.g, shade.b);
+
+            // Adjust until contrast is acceptable
+            let attempts = 0;
+            while (
+              attempts < 10 &&
+              Math.min(
+                getContrastRatio(hex, backgrounds[0]),
+                getContrastRatio(hex, backgrounds[1])
+              ) < 4.5
+            ) {
+              factor *= i < 0 ? 0.95 : 1.05;
+              shade = generateShade(baseRgb, factor);
+              hex = rgbToHex(shade.r, shade.g, shade.b);
+              attempts++;
+            }
+
+            variants.push(hex);
+          }
+
+          return variants.sort(
+            (a, b) => getRelativeLuminance(b) - getRelativeLuminance(a)
+          );
+        }
+
+        // Temperature-based scale
+        if (strategy === "temperature") {
+          const hsl = rgbToHsl(...Object.values(hexToRgb(primaryHex)));
+          for (let i = -halfSteps; i <= steps - 1 - halfSteps; i++) {
+            const t = i / halfSteps;
+            const hueShift = t * 15; // degrees
+            const l = clamp(hsl.l + t * ((maxLightness - maxDarkness) / 2));
+            const rgb = hslToRgb(clamp(hsl.h + hueShift / 360), hsl.s, l);
+            variants.push(rgbToHex(rgb.r, rgb.g, rgb.b));
+          }
+          return variants.sort(
+            (a, b) => getRelativeLuminance(b) - getRelativeLuminance(a)
+          );
+        }
 
         if (strategy === "rgb") {
           const baseRgb = hexToRgb(primaryHex);
@@ -213,12 +282,30 @@
         colors.forEach((color) => {
           const colorBox = document.createElement("div");
           colorBox.className =
-            "flex items-center justify-center text-white text-sm font-medium rounded shadow-md h-32 w-32 cursor-pointer relative";
+            "flex items-center justify-center text-white text-sm font-medium rounded shadow-md h-28 w-28 relative";
           colorBox.style.backgroundColor = color;
-          colorBox.innerHTML = `<span class="px-2 py-1 bg-black bg-opacity-50 rounded">${color}</span>`;
-          colorBox.addEventListener("click", () =>
-            copyToClipboard(color, colorBox)
-          );
+          const colorInput = document.createElement("input");
+          colorInput.type = "color";
+          colorInput.value = color;
+          colorInput.className = "absolute inset-0 opacity-0 cursor-pointer";
+          colorInput.addEventListener("input", (e) => {
+            const newColor = e.target.value.toUpperCase();
+            colorBox.style.backgroundColor = newColor;
+            span.innerText = newColor;
+          });
+          const span = document.createElement("span");
+          span.className =
+            "px-2 py-1 bg-black bg-opacity-50 rounded cursor-pointer";
+          span.innerText = color;
+          span.addEventListener("click", (e) => {
+            e.stopPropagation();
+            copyToClipboard(color, span);
+          });
+          colorBox.appendChild(span);
+          colorBox.appendChild(colorInput);
+          colorBox.addEventListener("click", () => {
+            colorInput.click();
+          });
           paletteDiv.appendChild(colorBox);
         });
       }
@@ -426,6 +513,11 @@
         });
 
         return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+      }
+      function getContrastRatio(hex1, hex2) {
+        const L1 = getRelativeLuminance(hex1) + 0.05;
+        const L2 = getRelativeLuminance(hex2) + 0.05;
+        return Math.max(L1, L2) / Math.min(L1, L2);
       }
 
       function generateShade(rgb, factor) {
